@@ -1,166 +1,180 @@
--- [[ MainUI.lua - Tabbed Version ]] --
+-- [[ MainUI.lua - Professional Loading Edition ]] --
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- GITHUB CONFIG
-local GITHUB_RAW_URL = "https://raw.githubusercontent.com/nabimadridgg-source/Rob-It/refs/heads/main/ESP.lua"
-local ESP = nil
-
--- State Management for Toggles
-local Toggles = {
-    NPC = false,
-    Items = false,
-    Vaults = false
-}
-
--- Load Logic
-local success, result = pcall(function()
-    return loadstring(game:HttpGet(GITHUB_RAW_URL))()
-end)
-if success then ESP = result end
-
 -- [[ UI CONSTRUCTION ]] --
-if LocalPlayer.PlayerGui:FindFirstChild("NabiDash") then LocalPlayer.PlayerGui.NabiDash:Destroy() end
+if LocalPlayer.PlayerGui:FindFirstChild("NabiDash") then 
+    LocalPlayer.PlayerGui.NabiDash:Destroy() 
+end
 
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
 ScreenGui.Name = "NabiDash"
 ScreenGui.ResetOnSpawn = false
 
-local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.new(0, 350, 0, 300)
-Main.Position = UDim2.new(0.5, -175, 0.5, -150)
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-Main.Active = true
-Main.Draggable = true
-Instance.new("UICorner", Main)
-Instance.new("UIStroke", Main).Color = Color3.fromRGB(45, 45, 55)
+-- [[ LOADING SCREEN ]] --
+local LoadingFrame = Instance.new("Frame", ScreenGui)
+LoadingFrame.Size = UDim2.new(0, 300, 0, 100)
+LoadingFrame.Position = UDim2.new(0.5, -150, 0.5, -50)
+LoadingFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+Instance.new("UICorner", LoadingFrame)
+Instance.new("UIStroke", LoadingFrame).Color = Color3.fromRGB(0, 255, 255)
 
--- Tab Navigation
-local TabFrame = Instance.new("Frame", Main)
-TabFrame.Size = UDim2.new(1, 0, 0, 40)
-TabFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-Instance.new("UICorner", TabFrame)
+local LoadText = Instance.new("TextLabel", LoadingFrame)
+LoadText.Size = UDim2.new(1, 0, 0.5, 0)
+LoadText.Text = "FETCHING DATA..."
+LoadText.TextColor3 = Color3.new(1, 1, 1)
+LoadText.Font = Enum.Font.GothamBold
+LoadText.BackgroundTransparency = 1
 
-local MainTabBtn = Instance.new("TextButton", TabFrame)
-MainTabBtn.Size = UDim2.new(0.5, 0, 1, 0)
-MainTabBtn.Text = "MAIN"
-MainTabBtn.Font = Enum.Font.GothamBold
-MainTabBtn.TextColor3 = Color3.new(1,1,1)
-MainTabBtn.BackgroundTransparency = 1
+local BarBG = Instance.new("Frame", LoadingFrame)
+BarBG.Size = UDim2.new(0.8, 0, 0, 10)
+BarBG.Position = UDim2.new(0.1, 0, 0.7, 0)
+BarBG.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+Instance.new("UICorner", BarBG)
 
-local ESPTabBtn = Instance.new("TextButton", TabFrame)
-ESPTabBtn.Size = UDim2.new(0.5, 0, 1, 0)
-ESPTabBtn.Position = UDim2.new(0.5, 0, 0, 0)
-ESPTabBtn.Text = "ESP"
-ESPTabBtn.Font = Enum.Font.GothamBold
-ESPTabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
-ESPTabBtn.BackgroundTransparency = 1
+local Bar = Instance.new("Frame", BarBG)
+Bar.Size = UDim2.new(0, 0, 1, 0)
+Bar.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
+Instance.new("UICorner", Bar)
 
--- Content Pages
-local MainContent = Instance.new("Frame", Main)
-MainContent.Size = UDim2.new(1, 0, 1, -40)
-MainContent.Position = UDim2.new(0, 0, 0, 40)
-MainContent.BackgroundTransparency = 1
+-- [[ GITHUB CONFIG & CACHE-BUSTER ]] --
+-- Adding ?t=tick() prevents GitHub from serving you the old cached file
+local GITHUB_RAW_URL = "https://raw.githubusercontent.com/nabimadridgg-source/Rob-It/refs/heads/main/ESP.lua?t=" .. tick()
+local ESP = nil
+local Toggles = { NPC = false, Items = false, Vaults = false }
 
-local ESPContent = Instance.new("Frame", Main)
-ESPContent.Size = UDim2.new(1, 0, 1, -40)
-ESPContent.Position = UDim2.new(0, 0, 0, 40)
-ESPContent.BackgroundTransparency = 1
-ESPContent.Visible = false
+-- [[ FETCH LOGIC ]] --
+task.spawn(function()
+    Bar:TweenSize(UDim2.new(0.5, 0, 1, 0), "Out", "Quad", 1)
+    task.wait(0.5)
+    
+    local success, result = pcall(function()
+        return loadstring(game:HttpGet(GITHUB_RAW_URL))()
+    end)
 
--- Tab Switching Logic
-MainTabBtn.MouseButton1Click:Connect(function()
-    MainContent.Visible = true
+    if success and type(result) == "table" then
+        ESP = result
+        Bar:TweenSize(UDim2.new(1, 0, 1, 0), "Out", "Quad", 0.5)
+        LoadText.Text = "DATA SECURED"
+        task.wait(0.5)
+    else
+        LoadText.Text = "FETCH FAILED"
+        LoadText.TextColor3 = Color3.new(1, 0, 0)
+        task.wait(2)
+        ScreenGui:Destroy()
+        return
+    end
+    
+    LoadingFrame:Destroy()
+    
+    -- [[ MAIN UI DASHBOARD ]] --
+    local Main = Instance.new("Frame", ScreenGui)
+    Main.Size = UDim2.new(0, 350, 0, 300)
+    Main.Position = UDim2.new(0.5, -175, 0.5, -150)
+    Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    Main.Active = true
+    Main.Draggable = true
+    Instance.new("UICorner", Main)
+    Instance.new("UIStroke", Main).Color = Color3.fromRGB(45, 45, 55)
+
+    -- Tabs
+    local TabFrame = Instance.new("Frame", Main)
+    TabFrame.Size = UDim2.new(1, 0, 0, 40)
+    TabFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    Instance.new("UICorner", TabFrame)
+
+    local MainBtn = Instance.new("TextButton", TabFrame)
+    MainBtn.Size = UDim2.new(0.5, 0, 1, 0)
+    MainBtn.Text = "MAIN"
+    MainBtn.Font = Enum.Font.GothamBold
+    MainBtn.TextColor3 = Color3.new(1,1,1)
+    MainBtn.BackgroundTransparency = 1
+
+    local ESPBtn = Instance.new("TextButton", TabFrame)
+    ESPBtn.Size = UDim2.new(0.5, 0, 1, 0)
+    ESPBtn.Position = UDim2.new(0.5, 0, 0, 0)
+    ESPBtn.Text = "ESP"
+    ESPBtn.Font = Enum.Font.GothamBold
+    ESPBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+    ESPBtn.BackgroundTransparency = 1
+
+    local MainContent = Instance.new("Frame", Main)
+    MainContent.Size = UDim2.new(1, 0, 1, -40)
+    MainContent.Position = UDim2.new(0, 0, 0, 40)
+    MainContent.BackgroundTransparency = 1
+
+    local ESPContent = Instance.new("Frame", Main)
+    ESPContent.Size = UDim2.new(1, 0, 1, -40)
+    ESPContent.Position = UDim2.new(0, 0, 0, 40)
+    ESPContent.BackgroundTransparency = 1
     ESPContent.Visible = false
-    MainTabBtn.TextColor3 = Color3.new(1,1,1)
-    ESPTabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+
+    -- Tab Switch
+    MainBtn.MouseButton1Click:Connect(function()
+        MainContent.Visible, ESPContent.Visible = true, false
+        MainBtn.TextColor3, ESPBtn.TextColor3 = Color3.new(1,1,1), Color3.fromRGB(150, 150, 150)
+    end)
+    ESPBtn.MouseButton1Click:Connect(function()
+        MainContent.Visible, ESPContent.Visible = false, true
+        ESPBtn.TextColor3, MainBtn.TextColor3 = Color3.new(1,1,1), Color3.fromRGB(150, 150, 150)
+    end)
+
+    -- Toggle Helper
+    local function CreateToggle(name, parent, callback)
+        local f = Instance.new("Frame", parent)
+        f.Size = UDim2.new(0.9, 0, 0, 45)
+        f.BackgroundTransparency = 1
+        
+        local l = Instance.new("TextLabel", f)
+        l.Size = UDim2.new(0.7, 0, 1, 0)
+        l.Text = name
+        l.TextColor3 = Color3.new(1,1,1)
+        l.Font = Enum.Font.Gotham
+        l.TextXAlignment = "Left"
+        l.BackgroundTransparency = 1
+        
+        local b = Instance.new("TextButton", f)
+        b.Size = UDim2.new(0, 60, 0, 25)
+        b.Position = UDim2.new(1, -60, 0.5, -12)
+        b.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+        b.Text = "OFF"
+        b.TextColor3 = Color3.new(1,1,1)
+        b.Font = Enum.Font.GothamBold
+        Instance.new("UICorner", b)
+        
+        local active = false
+        b.MouseButton1Click:Connect(function()
+            active = not active
+            b.Text = active and "ON" or "OFF"
+            b.BackgroundColor3 = active and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(50, 50, 55)
+            callback(active)
+        end)
+    end
+
+    Instance.new("UIListLayout", ESPContent).HorizontalAlignment = "Center"
+    Instance.new("UIListLayout", MainContent).HorizontalAlignment = "Center"
+
+    -- Main Content
+    local Desc = Instance.new("TextLabel", MainContent)
+    Desc.Size = UDim2.new(0.9, 0, 0, 100)
+    Desc.Text = "NABI ROB-IT TERMINAL\nStatus: Connected\nVersion: 6.0"
+    Desc.TextColor3 = Color3.fromRGB(150, 150, 150)
+    Desc.Font = Enum.Font.Gotham
+    Desc.BackgroundTransparency = 1
+
+    -- ESP Toggles
+    CreateToggle("NPC ESP", ESPContent, function(s) Toggles.NPC = s if not s then ESP.Clear() end end)
+    CreateToggle("VALUABLES ESP", ESPContent, function(s) Toggles.Items = s if not s then ESP.Clear() end end)
+    CreateToggle("VAULT ESP", ESPContent, function(s) Toggles.Vaults = s if not s then ESP.Clear() end end)
 end)
-
-ESPTabBtn.MouseButton1Click:Connect(function()
-    MainContent.Visible = false
-    ESPContent.Visible = true
-    ESPTabBtn.TextColor3 = Color3.new(1,1,1)
-    MainTabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
-end)
-
--- [[ TOGGLE COMPONENT ]] --
-local function CreateToggle(name, parent, startState, callback)
-    local Frame = Instance.new("Frame", parent)
-    Frame.Size = UDim2.new(0.9, 0, 0, 40)
-    Frame.BackgroundTransparency = 1
-    
-    local Label = Instance.new("TextLabel", Frame)
-    Label.Size = UDim2.new(0.7, 0, 1, 0)
-    Label.Text = name
-    Label.TextColor3 = Color3.new(1,1,1)
-    Label.Font = Enum.Font.Gotham
-    Label.TextSize = 14
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.BackgroundTransparency = 1
-    
-    local Btn = Instance.new("TextButton", Frame)
-    Btn.Size = UDim2.new(0, 60, 0, 25)
-    Btn.Position = UDim2.new(1, -60, 0.5, -12)
-    Btn.BackgroundColor3 = startState and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(50, 50, 55)
-    Btn.Text = startState and "ON" or "OFF"
-    Btn.TextColor3 = Color3.new(1,1,1)
-    Btn.Font = Enum.Font.GothamBold
-    Instance.new("UICorner", Btn)
-    
-    local active = startState
-    Btn.MouseButton1Click:Connect(function()
-        active = not active
-        Btn.Text = active and "ON" or "OFF"
-        Btn.BackgroundColor3 = active and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(50, 50, 55)
-        callback(active)
-    end)
-end
-
--- Layouts
-local MainList = Instance.new("UIListLayout", MainContent)
-MainList.Padding = UDim.new(0, 10)
-MainList.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-local ESPList = Instance.new("UIListLayout", ESPContent)
-ESPList.Padding = UDim.new(0, 10)
-ESPList.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
--- [[ ADD CONTENT ]] --
--- Main Tab
-local Welcome = Instance.new("TextLabel", MainContent)
-Welcome.Size = UDim2.new(0.9, 0, 0, 50)
-Welcome.Text = "Welcome to Nabi Terminal\nSelect a tab to begin."
-Welcome.TextColor3 = Color3.fromRGB(200, 200, 200)
-Welcome.BackgroundTransparency = 1
-Welcome.Font = Enum.Font.Gotham
-
--- ESP Tab
-if ESP then
-    CreateToggle("NPC ESP", ESPContent, false, function(state)
-        Toggles.NPC = state
-        if not state then ESP.Clear() end -- Simple clear for example
-    end)
-    CreateToggle("GEM & TOOL ESP", ESPContent, false, function(state)
-        Toggles.Items = state
-        if not state then ESP.Clear() end
-    end)
-    CreateToggle("VAULT ESP", ESPContent, false, function(state)
-        Toggles.Vaults = state
-        if not state then ESP.Clear() end
-    end)
-end
 
 -- [[ REFRESH LOOP ]] --
--- This loop runs in the background and checks the toggles
 task.spawn(function()
-    while task.wait(2) do
-        if Toggles.NPC then ESP.ScanNPCs() end
-        if Toggles.Items then ESP.ScanItems() end
-        if Toggles.Vaults then ESP.ScanVaults() end
-        
-        -- If all off, clear
-        if not Toggles.NPC and not Toggles.Items and not Toggles.Vaults then
-            ESP.Clear()
+    while task.wait(3) do
+        if ESP then
+            if Toggles.NPC then pcall(ESP.ScanNPCs) end
+            if Toggles.Items then pcall(ESP.ScanItems) end
+            if Toggles.Vaults then pcall(ESP.ScanVaults) end
         end
     end
 end)
