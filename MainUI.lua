@@ -1,11 +1,14 @@
--- [[ MainUI.lua - ADDED AUTO TOGGLE ]] --
+-- [[ MainUI.lua - FULL REVISED SCRIPT ]] --
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
-local GITHUB_URL = "https://raw.githubusercontent.com/nabimadridgg-source/Rob-It/refs/heads/main/ESP.lua?t="..tick()
+local ESP_URL = "https://raw.githubusercontent.com/nabimadridgg-source/Rob-It/refs/heads/main/ESP.lua?t="..tick()
+local AUTO_URL = "https://raw.githubusercontent.com/nabimadridgg-source/Rob-It/refs/heads/main/AUTO.lua?t="..tick()
+
 local ESP = nil
+local AUTO = nil
 local ESP_ENABLED = false
 local AUTO_ENABLED = false
 local UI_OPEN = true
@@ -190,10 +193,13 @@ task.spawn(function()
     
     task.wait(2.5)
     
-    local success, result = pcall(function() return loadstring(game:HttpGet(GITHUB_URL))() end)
+    -- Load both scripts
+    local successESP, resESP = pcall(function() return loadstring(game:HttpGet(ESP_URL))() end)
+    local successAUTO, resAUTO = pcall(function() return loadstring(game:HttpGet(AUTO_URL))() end)
     
-    if success then
-        ESP = result
+    if successESP and successAUTO then
+        ESP = resESP
+        AUTO = resAUTO
         StatusLabel.Text = "READY"
         task.wait(0.5)
         
@@ -218,7 +224,12 @@ task.spawn(function()
             autoBtn.Text = AUTO_ENABLED and "ON" or "OFF"
             TweenService:Create(autoBtn, TweenInfo.new(0.3), {BackgroundColor3 = AUTO_ENABLED and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(35, 35, 40)}):Play()
             autoBtn.TextColor3 = AUTO_ENABLED and Color3.new(0,0,0) or Color3.new(1,1,1)
-            -- Add Auto functionality here later
+            
+            if AUTO and AUTO_ENABLED then 
+                pcall(AUTO.Start) 
+            elseif AUTO then 
+                pcall(AUTO.Stop) 
+            end
         end)
 
         -- [[ ESP CONTENT TOGGLES ]] --
