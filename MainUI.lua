@@ -1,227 +1,200 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
 -- [[ GITHUB CONFIG ]] --
 local GITHUB_RAW_URL = "https://raw.githubusercontent.com/nabimadridgg-source/Rob-It/refs/heads/main/ESP.lua?t=" .. tick()
 local ESP = nil
 local Toggles = { NPC = false, Items = false, Vaults = false }
-
--- [[ UI STATE ]] --
 local UI_VISIBLE = true
 
--- [[ CORE UI CONSTRUCTION ]] --
+-- [[ UI ROOT ]] --
 if LocalPlayer.PlayerGui:FindFirstChild("NabiModern") then LocalPlayer.PlayerGui.NabiModern:Destroy() end
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
 ScreenGui.Name = "NabiModern"
 ScreenGui.ResetOnSpawn = false
 
--- Helper for specific clearing
-local function ClearSpecific(tagName)
-    for _, v in ipairs(workspace:GetDescendants()) do
-        if v.Name == "NabiGlow" and v:GetAttribute("ESPType") == tagName then
-            v:Destroy()
-        end
-    end
-end
-
--- Draggable Helper
-local function MakeDraggable(frame, parent)
-    parent = parent or frame
+-- [[ DRAG SYSTEM ]] --
+local function MakeDraggable(obj)
     local dragging, dragInput, dragStart, startPos
-    frame.InputBegan:Connect(function(input)
+    obj.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = parent.Position
+            dragging = true; dragStart = input.Position; startPos = obj.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
         end
+    end)
+    obj.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
     end)
     UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
             local delta = input.Position - dragStart
-            parent.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            obj.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
-    end)
-    frame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
     end)
 end
 
--- [[ MINIMIZED ICON ]] --
-local MinimizedIcon = Instance.new("Frame", ScreenGui)
-MinimizedIcon.Size = UDim2.new(0, 45, 0, 45)
-MinimizedIcon.Position = UDim2.new(0.05, 0, 0.4, 0)
-MinimizedIcon.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-MinimizedIcon.Visible = false
-Instance.new("UICorner", MinimizedIcon).CornerRadius = UDim.new(1, 0)
-Instance.new("UIStroke", MinimizedIcon).Color = Color3.fromRGB(0, 255, 255)
-MakeDraggable(MinimizedIcon)
+-- [[ MINIMIZED ICON (Moveable) ]] --
+local Icon = Instance.new("Frame", ScreenGui)
+Icon.Size = UDim2.new(0, 50, 0, 50)
+Icon.Position = UDim2.new(0.05, 0, 0.4, 0)
+Icon.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+Icon.Visible = false
+Icon.Active = true
+Instance.new("UICorner", Icon).CornerRadius = UDim.new(1, 0)
+local IconStroke = Instance.new("UIStroke", Icon)
+IconStroke.Color = Color3.fromRGB(0, 255, 255)
+IconStroke.Thickness = 1.5
+MakeDraggable(Icon)
 
-local IconBtn = Instance.new("TextButton", MinimizedIcon)
+local IconBtn = Instance.new("TextButton", Icon)
 IconBtn.Size = UDim2.new(1, 0, 1, 0)
 IconBtn.BackgroundTransparency = 1
 IconBtn.Text = "N"
 IconBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
 IconBtn.Font = Enum.Font.GothamBold
-IconBtn.TextSize = 18
+IconBtn.TextSize = 20
 
 -- [[ MAIN DASHBOARD ]] --
 local Main = Instance.new("Frame", ScreenGui)
 Main.Size = UDim2.new(0, 380, 0, 320)
 Main.Position = UDim2.new(0.5, -190, 0.5, -160)
 Main.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 6)
+Main.ClipsDescendants = true
+Main.Active = true
+Main.Visible = false
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 8)
 Instance.new("UIStroke", Main).Color = Color3.fromRGB(40, 40, 45)
+MakeDraggable(Main)
 
+-- [[ ANIMATION CONTROLLER ]] --
+local function AnimateUI(visible)
+    if visible then
+        Main.Visible = true
+        Main:TweenSize(UDim2.new(0, 380, 0, 320), "Out", "Elastic", 0.6, true)
+        Icon:TweenSize(UDim2.new(0, 0, 0, 0), "In", "Back", 0.3, true, function() Icon.Visible = false end)
+    else
+        Main:TweenSize(UDim2.new(0, 0, 0, 0), "In", "Back", 0.4, true, function() Main.Visible = false end)
+        Icon.Visible = true
+        Icon:TweenSize(UDim2.new(0, 50, 0, 50), "Out", "Elastic", 0.6, true)
+    end
+end
+
+-- [[ LOADING SEQUENCE ]] --
+local LoadLabel = Instance.new("TextLabel", ScreenGui)
+LoadLabel.Size = UDim2.new(1, 0, 1, 0)
+LoadLabel.BackgroundTransparency = 1
+LoadLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+LoadLabel.Font = Enum.Font.GothamBold
+LoadLabel.TextSize = 20
+LoadLabel.Text = "INITIALIZING NABI..."
+
+task.spawn(function()
+    task.wait(1)
+    LoadLabel.Text = "SYNCING WITH REPOSITORY..."
+    task.wait(1)
+    
+    local success, result = pcall(function()
+        return loadstring(game:HttpGet(GITHUB_RAW_URL))()
+    end)
+    
+    if success and type(result) == "table" then
+        ESP = result
+        LoadLabel.Text = "SYSTEMS READY"
+        TweenService:Create(LoadLabel, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+        task.wait(0.5)
+        AnimateUI(true)
+    else
+        LoadLabel.Text = "FAILURE: CHECK CONSOLE"
+        LoadLabel.TextColor3 = Color3.new(1,0,0)
+    end
+end)
+
+-- [[ BUILD INTERFACE CONTENT ]] --
 -- Header
 local Header = Instance.new("Frame", Main)
-Header.Size = UDim2.new(1, 0, 0, 35)
+Header.Size = UDim2.new(1, 0, 0, 40)
 Header.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 6)
-MakeDraggable(Header, Main)
+Instance.new("UICorner", Header)
 
 local Title = Instance.new("TextLabel", Header)
 Title.Size = UDim2.new(1, -50, 1, 0)
-Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "NABI ROB-IT // TERMINAL v6"
-Title.TextColor3 = Color3.fromRGB(180, 180, 180)
-Title.Font = Enum.Font.GothamMedium
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.Text = "NABI SENSORY // V6"
+Title.TextColor3 = Color3.fromRGB(200, 200, 200)
+Title.Font = Enum.Font.GothamBold
 Title.TextSize = 12
 Title.TextXAlignment = "Left"
 Title.BackgroundTransparency = 1
 
 local CloseBtn = Instance.new("TextButton", Header)
-CloseBtn.Size = UDim2.new(0, 35, 1, 0)
-CloseBtn.Position = UDim2.new(1, -35, 0, 0)
+CloseBtn.Size = UDim2.new(0, 40, 1, 0)
+CloseBtn.Position = UDim2.new(1, -40, 0, 0)
 CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+CloseBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
 CloseBtn.BackgroundTransparency = 1
 CloseBtn.Font = Enum.Font.GothamBold
 
--- Tabs
-local Nav = Instance.new("Frame", Main)
-Nav.Size = UDim2.new(1, 0, 0, 30)
-Nav.Position = UDim2.new(0, 0, 0, 35)
-Nav.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
-
-local MainTab = Instance.new("TextButton", Nav)
-MainTab.Size = UDim2.new(0.5, 0, 1, 0)
-MainTab.Text = "DASHBOARD"
-MainTab.Font = Enum.Font.GothamBold
-MainTab.TextSize = 10
-MainTab.TextColor3 = Color3.new(1,1,1)
-MainTab.BackgroundTransparency = 1
-
-local ESPTab = Instance.new("TextButton", Nav)
-ESPTab.Size = UDim2.new(0.5, 0, 1, 0)
-ESPTab.Position = UDim2.new(0.5, 0, 0, 0)
-ESPTab.Text = "SENSORY (ESP)"
-ESPTab.Font = Enum.Font.GothamBold
-ESPTab.TextSize = 10
-ESPTab.TextColor3 = Color3.fromRGB(100, 100, 100)
-ESPTab.BackgroundTransparency = 1
-
--- Content
-local MainContent = Instance.new("Frame", Main)
-MainContent.Size = UDim2.new(1, -20, 1, -85)
-MainContent.Position = UDim2.new(0, 10, 0, 75)
-MainContent.BackgroundTransparency = 1
-
+-- Tabs & Toggles
 local ESPContent = Instance.new("Frame", Main)
-ESPContent.Size = UDim2.new(1, -20, 1, -85)
-ESPContent.Position = UDim2.new(0, 10, 0, 75)
+ESPContent.Size = UDim2.new(1, -20, 1, -60)
+ESPContent.Position = UDim2.new(0, 10, 0, 50)
 ESPContent.BackgroundTransparency = 1
-ESPContent.Visible = false
+local List = Instance.new("UIListLayout", ESPContent)
+List.Padding = UDim.new(0, 10)
 
-Instance.new("UIListLayout", MainContent).Padding = UDim.new(0, 8)
-Instance.new("UIListLayout", ESPContent).Padding = UDim.new(0, 8)
-
--- [[ TOGGLE COMPONENT ]] --
-local function CreateToggle(name, parent, tag, callback)
-    local t = Instance.new("Frame", parent)
-    t.Size = UDim2.new(1, 0, 0, 40)
+local function CreateToggle(name, callback)
+    local t = Instance.new("Frame", ESPContent)
+    t.Size = UDim2.new(1, 0, 0, 45)
     t.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-    Instance.new("UICorner", t).CornerRadius = UDim.new(0, 4)
+    Instance.new("UICorner", t).CornerRadius = UDim.new(0, 6)
     
     local l = Instance.new("TextLabel", t)
     l.Size = UDim2.new(0.7, 0, 1, 0)
-    l.Position = UDim2.new(0, 10, 0, 0)
+    l.Position = UDim2.new(0, 12, 0, 0)
     l.Text = name:upper()
-    l.TextColor3 = Color3.fromRGB(200, 200, 200)
+    l.TextColor3 = Color3.fromRGB(150, 150, 150)
     l.Font = Enum.Font.GothamBold
     l.TextSize = 11
     l.TextXAlignment = "Left"
     l.BackgroundTransparency = 1
     
     local b = Instance.new("TextButton", t)
-    b.Size = UDim2.new(0, 50, 0, 22)
-    b.Position = UDim2.new(1, -60, 0.5, -11)
-    b.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+    b.Size = UDim2.new(0, 60, 0, 26)
+    b.Position = UDim2.new(1, -70, 0.5, -13)
+    b.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
     b.Text = "OFF"
     b.TextColor3 = Color3.new(1,1,1)
     b.Font = Enum.Font.GothamBold
-    b.TextSize = 9
+    b.TextSize = 10
     Instance.new("UICorner", b)
     
     local active = false
     b.MouseButton1Click:Connect(function()
         active = not active
         b.Text = active and "ON" or "OFF"
-        b.BackgroundColor3 = active and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(35, 35, 40)
+        TweenService:Create(b, TweenInfo.new(0.3), {BackgroundColor3 = active and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(30, 30, 35)}):Play()
         b.TextColor3 = active and Color3.new(0,0,0) or Color3.new(1,1,1)
         callback(active)
     end)
 end
 
--- [[ LOGIC & EVENTS ]] --
-local function ToggleUI()
+-- Keybinds & Logic
+local function ToggleMain()
     UI_VISIBLE = not UI_VISIBLE
-    Main.Visible = UI_VISIBLE
-    MinimizedIcon.Visible = not UI_VISIBLE
+    AnimateUI(UI_VISIBLE)
 end
 
-CloseBtn.MouseButton1Click:Connect(ToggleUI)
-IconBtn.MouseButton1Click:Connect(ToggleUI)
+CloseBtn.MouseButton1Click:Connect(ToggleMain)
+IconBtn.MouseButton1Click:Connect(ToggleMain)
 UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.K then ToggleUI() end
+    if input.KeyCode == Enum.KeyCode.K then ToggleMain() end
 end)
 
-MainTab.MouseButton1Click:Connect(function()
-    MainContent.Visible, ESPContent.Visible = true, false
-    MainTab.TextColor3, ESPTab.TextColor3 = Color3.new(1,1,1), Color3.fromRGB(100, 100, 100)
-end)
-
-ESPTab.MouseButton1Click:Connect(function()
-    MainContent.Visible, ESPContent.Visible = false, true
-    ESPTab.TextColor3, MainTab.TextColor3 = Color3.new(1,1,1), Color3.fromRGB(100, 100, 100)
-end)
-
--- Fetch ESP Logic
-task.spawn(function()
-    local success, result = pcall(function()
-        return loadstring(game:HttpGet(GITHUB_RAW_URL))()
-    end)
-    if success and type(result) == "table" then
-        ESP = result
-        -- NPC Toggle
-        CreateToggle("Visual: NPCs", ESPContent, "NPC", function(s) 
-            Toggles.NPC = s 
-            if s then pcall(ESP.ScanNPCs) else ClearSpecific("NPC") end 
-        end)
-        -- Valuables Toggle
-        CreateToggle("Visual: Valuables", ESPContent, "Items", function(s) 
-            Toggles.Items = s 
-            if s then pcall(ESP.ScanItems) else ClearSpecific("Items") end 
-        end)
-        -- Vaults Toggle
-        CreateToggle("Visual: Vaults", ESPContent, "Vaults", function(s) 
-            Toggles.Vaults = s 
-            if s then pcall(ESP.ScanVaults) else ClearSpecific("Vaults") end 
-        end)
-    end
-end)
-
--- Global Background Refresh (For items spawning while enabled)
+-- Background Refresh
 task.spawn(function()
     while task.wait(3) do
         if ESP then
@@ -231,3 +204,9 @@ task.spawn(function()
         end
     end
 end)
+
+-- Initialize Toggles (After loading finishes)
+repeat task.wait() until ESP ~= nil
+CreateToggle("Show NPCs", function(s) Toggles.NPC = s if s then ESP.ScanNPCs() end end)
+CreateToggle("Show Valuables", function(s) Toggles.Items = s if s then ESP.ScanItems() end end)
+CreateToggle("Show Vaults", function(s) Toggles.Vaults = s if s then ESP.ScanVaults() end end)
