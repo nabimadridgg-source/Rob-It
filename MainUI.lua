@@ -1,4 +1,4 @@
--- [[ MainUI.lua - PREMIUM BACKGROUND LOADING ]] --
+-- [[ MainUI.lua - ADDED AUTO TOGGLE ]] --
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -7,6 +7,7 @@ local LocalPlayer = Players.LocalPlayer
 local GITHUB_URL = "https://raw.githubusercontent.com/nabimadridgg-source/Rob-It/refs/heads/main/ESP.lua?t="..tick()
 local ESP = nil
 local ESP_ENABLED = false
+local AUTO_ENABLED = false
 local UI_OPEN = true
 
 -- [[ UI ROOT ]] --
@@ -37,11 +38,11 @@ local function MakeDraggable(obj)
     end)
 end
 
--- [[ REFINED LOADING UI WITH GRADIENT ]] --
+-- [[ REFINED LOADING UI ]] --
 local LoadingFrame = Instance.new("Frame", ScreenGui)
 LoadingFrame.Size = UDim2.new(0, 0, 0, 0)
 LoadingFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-LoadingFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- White for gradient
+LoadingFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 LoadingFrame.BorderSizePixel = 0
 LoadingFrame.BackgroundTransparency = 1
 local LCorner = Instance.new("UICorner", LoadingFrame)
@@ -59,7 +60,6 @@ LStroke.Color = Color3.fromRGB(0, 255, 255)
 LStroke.Thickness = 2
 LStroke.Transparency = 1
 
--- Subtle Background "Pulse" Ring
 local BgRing = Instance.new("Frame", LoadingFrame)
 BgRing.Size = UDim2.new(0.9, 0, 0.9, 0)
 BgRing.Position = UDim2.new(0.05, 0, 0.05, 0)
@@ -156,7 +156,7 @@ TabContainer.Size = UDim2.new(1, 0, 0, 30); TabContainer.Position = UDim2.new(0,
 local MainBtn = Instance.new("TextButton", TabContainer)
 MainBtn.Size = UDim2.new(0.5, 0, 1, 0); MainBtn.Text = "MAIN"; MainBtn.TextColor3 = Color3.new(1,1,1); MainBtn.Font = "GothamBold"; MainBtn.TextSize = 9; MainBtn.BackgroundTransparency = 1
 local ESPBtn = Instance.new("TextButton", TabContainer)
-ESPBtn.Size = UDim2.new(0.5, 0, 1, 0); ESPBtn.Position = UDim2.new(0.5, 0, 0, 0); ESPBtn.Text = "SENSORY"; ESPBtn.TextColor3 = Color3.fromRGB(100, 100, 100); ESPBtn.Font = "GothamBold"; ESPBtn.TextSize = 9; ESPBtn.BackgroundTransparency = 1
+ESPBtn.Size = UDim2.new(0.5, 0, 1, 0); ESPBtn.Position = UDim2.new(0.5, 0, 0, 0); ESPBtn.Text = "ESP"; ESPBtn.TextColor3 = Color3.fromRGB(100, 100, 100); ESPBtn.Font = "GothamBold"; ESPBtn.TextSize = 9; ESPBtn.BackgroundTransparency = 1
 
 local MainContent = Instance.new("Frame", CanvasGroup)
 MainContent.Size = UDim2.new(1, -20, 1, -75); MainContent.Position = UDim2.new(0, 10, 0, 75); MainContent.BackgroundTransparency = 1
@@ -168,7 +168,6 @@ ESPBtn.MouseButton1Click:Connect(function() MainContent.Visible, ESPContent.Visi
 
 -- [[ BOOT SEQUENCE ]] --
 task.spawn(function()
-    -- 1. Animated Spawn (Enhanced)
     TweenService:Create(LoadingFrame, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Size = UDim2.new(0, 190, 0, 190),
         Position = UDim2.new(0.5, -95, 0.5, -95),
@@ -179,14 +178,11 @@ task.spawn(function()
     
     task.wait(0.8)
     
-    -- 2. Cinematic Loop (Morphing Spinner + Pulse Ring)
     task.spawn(function()
         while LoadingFrame and LoadingFrame.Parent do
             TweenService:Create(LoaderSquare, TweenInfo.new(1, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut), {Rotation = LoaderSquare.Rotation + 180}):Play()
             TweenService:Create(LSCorner, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 0, true), {CornerRadius = UDim.new(0, 25)}):Play()
             TweenService:Create(LSStroke, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 0, true), {Thickness = 5, Transparency = 0.4}):Play()
-            
-            -- Pulse background ring
             TweenService:Create(BgRingStroke, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 0, true), {Transparency = 0.5}):Play()
             task.wait(1)
         end
@@ -201,7 +197,6 @@ task.spawn(function()
         StatusLabel.Text = "READY"
         task.wait(0.5)
         
-        -- 3. Transition to Main
         TweenService:Create(LoadingFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
             Size = UDim2.new(0, 0, 0, 0),
             Position = UDim2.new(0.5, 0, 0.5, 0),
@@ -212,17 +207,31 @@ task.spawn(function()
         LoadingFrame:Destroy()
         AnimateUI(true)
         
-        -- Sensory Toggle Logic
-        local t = Instance.new("Frame", ESPContent)
-        t.Size = UDim2.new(1, 0, 0, 50); t.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", t)
-        local l = Instance.new("TextLabel", t); l.Size = UDim2.new(0.6, 0, 1, 0); l.Position = UDim2.new(0, 15, 0, 0); l.Text = "ENABLE ALL SENSORY"; l.TextColor3 = Color3.new(1,1,1); l.Font = "GothamBold"; l.TextSize = 11; l.TextXAlignment = "Left"; l.BackgroundTransparency = 1
-        local b = Instance.new("TextButton", t); b.Size = UDim2.new(0, 75, 0, 28); b.Position = UDim2.new(1, -85, 0.5, -14); b.BackgroundColor3 = Color3.fromRGB(35, 35, 40); b.Text = "OFF"; b.TextColor3 = Color3.new(1,1,1); b.Font = "GothamBold"; b.TextSize = 9; Instance.new("UICorner", b)
+        -- [[ MAIN CONTENT TOGGLES ]] --
+        local autoFrame = Instance.new("Frame", MainContent)
+        autoFrame.Size = UDim2.new(1, 0, 0, 50); autoFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", autoFrame)
+        local autoLabel = Instance.new("TextLabel", autoFrame); autoLabel.Size = UDim2.new(0.6, 0, 1, 0); autoLabel.Position = UDim2.new(0, 15, 0, 0); autoLabel.Text = "AUTO"; autoLabel.TextColor3 = Color3.new(1,1,1); autoLabel.Font = "GothamBold"; autoLabel.TextSize = 11; autoLabel.TextXAlignment = "Left"; autoLabel.BackgroundTransparency = 1
+        local autoBtn = Instance.new("TextButton", autoFrame); autoBtn.Size = UDim2.new(0, 75, 0, 28); autoBtn.Position = UDim2.new(1, -85, 0.5, -14); autoBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40); autoBtn.Text = "OFF"; autoBtn.TextColor3 = Color3.new(1,1,1); autoBtn.Font = "GothamBold"; autoBtn.TextSize = 9; Instance.new("UICorner", autoBtn)
         
-        b.MouseButton1Click:Connect(function()
+        autoBtn.MouseButton1Click:Connect(function()
+            AUTO_ENABLED = not AUTO_ENABLED
+            autoBtn.Text = AUTO_ENABLED and "ON" or "OFF"
+            TweenService:Create(autoBtn, TweenInfo.new(0.3), {BackgroundColor3 = AUTO_ENABLED and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(35, 35, 40)}):Play()
+            autoBtn.TextColor3 = AUTO_ENABLED and Color3.new(0,0,0) or Color3.new(1,1,1)
+            -- Add Auto functionality here later
+        end)
+
+        -- [[ ESP CONTENT TOGGLES ]] --
+        local espFrame = Instance.new("Frame", ESPContent)
+        espFrame.Size = UDim2.new(1, 0, 0, 50); espFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", espFrame)
+        local espLabel = Instance.new("TextLabel", espFrame); espLabel.Size = UDim2.new(0.6, 0, 1, 0); espLabel.Position = UDim2.new(0, 15, 0, 0); espLabel.Text = "ENABLE ALL ESP"; espLabel.TextColor3 = Color3.new(1,1,1); espLabel.Font = "GothamBold"; espLabel.TextSize = 11; espLabel.TextXAlignment = "Left"; espLabel.BackgroundTransparency = 1
+        local espBtn = Instance.new("TextButton", espFrame); espBtn.Size = UDim2.new(0, 75, 0, 28); espBtn.Position = UDim2.new(1, -85, 0.5, -14); espBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40); espBtn.Text = "OFF"; espBtn.TextColor3 = Color3.new(1,1,1); espBtn.Font = "GothamBold"; espBtn.TextSize = 9; Instance.new("UICorner", espBtn)
+        
+        espBtn.MouseButton1Click:Connect(function()
             ESP_ENABLED = not ESP_ENABLED
-            b.Text = ESP_ENABLED and "ON" or "OFF"
-            TweenService:Create(b, TweenInfo.new(0.3), {BackgroundColor3 = ESP_ENABLED and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(35, 35, 40)}):Play()
-            b.TextColor3 = ESP_ENABLED and Color3.new(0,0,0) or Color3.new(1,1,1)
+            espBtn.Text = ESP_ENABLED and "ON" or "OFF"
+            TweenService:Create(espBtn, TweenInfo.new(0.3), {BackgroundColor3 = ESP_ENABLED and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(35, 35, 40)}):Play()
+            espBtn.TextColor3 = ESP_ENABLED and Color3.new(0,0,0) or Color3.new(1,1,1)
             if ESP_ENABLED then ESP.ScanAll() else ESP.Clear() end
         end)
     end
