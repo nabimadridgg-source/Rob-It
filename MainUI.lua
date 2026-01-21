@@ -12,12 +12,20 @@ local UI_VISIBLE = true
 
 -- [[ CORE UI CONSTRUCTION ]] --
 if LocalPlayer.PlayerGui:FindFirstChild("NabiModern") then LocalPlayer.PlayerGui.NabiModern:Destroy() end
-
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
 ScreenGui.Name = "NabiModern"
 ScreenGui.ResetOnSpawn = false
 
--- Draggable Helper Function
+-- Helper for specific clearing
+local function ClearSpecific(tagName)
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v.Name == "NabiGlow" and v:GetAttribute("ESPType") == tagName then
+            v:Destroy()
+        end
+    end
+end
+
+-- Draggable Helper
 local function MakeDraggable(frame, parent)
     parent = parent or frame
     local dragging, dragInput, dragStart, startPos
@@ -27,9 +35,6 @@ local function MakeDraggable(frame, parent)
             dragStart = input.Position
             startPos = parent.Position
         end
-    end)
-    frame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
     end)
     UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
@@ -42,7 +47,7 @@ local function MakeDraggable(frame, parent)
     end)
 end
 
--- [[ MINIMIZED ICON (Moveable) ]] --
+-- [[ MINIMIZED ICON ]] --
 local MinimizedIcon = Instance.new("Frame", ScreenGui)
 MinimizedIcon.Size = UDim2.new(0, 45, 0, 45)
 MinimizedIcon.Position = UDim2.new(0.05, 0, 0.4, 0)
@@ -66,11 +71,9 @@ Main.Size = UDim2.new(0, 380, 0, 320)
 Main.Position = UDim2.new(0.5, -190, 0.5, -160)
 Main.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 6)
-local MainStroke = Instance.new("UIStroke", Main)
-MainStroke.Color = Color3.fromRGB(40, 40, 45)
-MainStroke.Thickness = 1.5
+Instance.new("UIStroke", Main).Color = Color3.fromRGB(40, 40, 45)
 
--- Header (Draggable Area)
+-- Header
 local Header = Instance.new("Frame", Main)
 Header.Size = UDim2.new(1, 0, 0, 35)
 Header.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
@@ -95,7 +98,7 @@ CloseBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
 CloseBtn.BackgroundTransparency = 1
 CloseBtn.Font = Enum.Font.GothamBold
 
--- Navigation
+-- Tabs
 local Nav = Instance.new("Frame", Main)
 Nav.Size = UDim2.new(1, 0, 0, 30)
 Nav.Position = UDim2.new(0, 0, 0, 35)
@@ -118,7 +121,7 @@ ESPTab.TextSize = 10
 ESPTab.TextColor3 = Color3.fromRGB(100, 100, 100)
 ESPTab.BackgroundTransparency = 1
 
--- Content Pages
+-- Content
 local MainContent = Instance.new("Frame", Main)
 MainContent.Size = UDim2.new(1, -20, 1, -85)
 MainContent.Position = UDim2.new(0, 10, 0, 75)
@@ -134,7 +137,7 @@ Instance.new("UIListLayout", MainContent).Padding = UDim.new(0, 8)
 Instance.new("UIListLayout", ESPContent).Padding = UDim.new(0, 8)
 
 -- [[ TOGGLE COMPONENT ]] --
-local function CreateToggle(name, parent, callback)
+local function CreateToggle(name, parent, tag, callback)
     local t = Instance.new("Frame", parent)
     t.Size = UDim2.new(1, 0, 0, 40)
     t.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
@@ -193,15 +196,6 @@ ESPTab.MouseButton1Click:Connect(function()
     ESPTab.TextColor3, MainTab.TextColor3 = Color3.new(1,1,1), Color3.fromRGB(100, 100, 100)
 end)
 
--- Initialize Content
-local Welcome = Instance.new("TextLabel", MainContent)
-Welcome.Size = UDim2.new(1, 0, 0, 60)
-Welcome.Text = "CONNECTION ESTABLISHED\nPRESS [K] TO TOGGLE INTERFACE"
-Welcome.TextColor3 = Color3.fromRGB(100, 100, 110)
-Welcome.Font = Enum.Font.GothamMedium
-Welcome.TextSize = 11
-Welcome.BackgroundTransparency = 1
-
 -- Fetch ESP Logic
 task.spawn(function()
     local success, result = pcall(function()
@@ -209,13 +203,25 @@ task.spawn(function()
     end)
     if success and type(result) == "table" then
         ESP = result
-        CreateToggle("Visual: NPCs", ESPContent, function(s) Toggles.NPC = s if not s then ESP.Clear() end end)
-        CreateToggle("Visual: Valuables", ESPContent, function(s) Toggles.Items = s if not s then ESP.Clear() end end)
-        CreateToggle("Visual: Vaults", ESPContent, function(s) Toggles.Vaults = s if not s then ESP.Clear() end end)
+        -- NPC Toggle
+        CreateToggle("Visual: NPCs", ESPContent, "NPC", function(s) 
+            Toggles.NPC = s 
+            if s then pcall(ESP.ScanNPCs) else ClearSpecific("NPC") end 
+        end)
+        -- Valuables Toggle
+        CreateToggle("Visual: Valuables", ESPContent, "Items", function(s) 
+            Toggles.Items = s 
+            if s then pcall(ESP.ScanItems) else ClearSpecific("Items") end 
+        end)
+        -- Vaults Toggle
+        CreateToggle("Visual: Vaults", ESPContent, "Vaults", function(s) 
+            Toggles.Vaults = s 
+            if s then pcall(ESP.ScanVaults) else ClearSpecific("Vaults") end 
+        end)
     end
 end)
 
--- Global Loop
+-- Global Background Refresh (For items spawning while enabled)
 task.spawn(function()
     while task.wait(3) do
         if ESP then
