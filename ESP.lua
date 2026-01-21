@@ -1,9 +1,9 @@
--- [[ ESP.lua - Category-Aware Logic ]] --
+-- [[ ESP.lua - FULL REVISED VERSION ]] --
 local ESP = {}
 
 local COLORS = {
     NPC = Color3.fromRGB(255, 70, 70),      -- Red
-    GEM = Color3.fromRGB(0, 255, 255),      -- Cyan
+    DIAMOND = Color3.fromRGB(0, 255, 255),  -- Diamond Cyan
     TOOL = Color3.fromRGB(160, 82, 45),     -- Brown
     NATURAL = Color3.fromRGB(50, 255, 50),  -- Green
     VAULT = Color3.fromRGB(180, 80, 255)    -- Purple
@@ -36,7 +36,7 @@ function ESP.ScanNPCs()
         if Unnamed then
             for _, v in ipairs(Unnamed:GetChildren()) do
                 if v.Name ~= "NPCRequirements" then 
-                    ApplyGlow(v, COLORS.NPC, "NPC") -- Tagged as NPC
+                    ApplyGlow(v, COLORS.NPC, "NPC")
                 end
             end
         end
@@ -48,14 +48,16 @@ function ESP.ScanItems()
     local Steal = Map and Map:FindFirstChild("StealableItems")
     if Steal then
         for _, v in ipairs(Steal:GetChildren()) do
-            if v.Name == "Gem" then 
-                ApplyGlow(v, COLORS.GEM, "Items") -- Tagged as Items
-            elseif v.Name == "Tool" then 
-                ApplyGlow(v, COLORS.TOOL, "Items") -- Tagged as Items
-            elseif v.Name == "Natural" then
+            if v.Name == "Natural" then
+                -- Handle Natural Folder specifically
                 for _, n in ipairs(v:GetChildren()) do 
-                    ApplyGlow(n, COLORS.NATURAL, "Items") -- Tagged as Items
+                    ApplyGlow(n, COLORS.NATURAL, "Items") 
                 end
+            elseif v.Name == "Tool" then
+                ApplyGlow(v, COLORS.TOOL, "Items")
+            else
+                -- CATCH ALL: Highlights Gems and any other misc objects as Diamond Cyan
+                ApplyGlow(v, COLORS.DIAMOND, "Items")
             end
         end
     end
@@ -66,7 +68,7 @@ function ESP.ScanVaults()
     local Vaults = Map and Map:FindFirstChild("VaultsPositions")
     if Vaults then
         for _, v in ipairs(Vaults:GetChildren()) do 
-            ApplyGlow(v, COLORS.VAULT, "Vaults") -- Tagged as Vaults
+            ApplyGlow(v, COLORS.VAULT, "Vaults")
         end
     end
 end
