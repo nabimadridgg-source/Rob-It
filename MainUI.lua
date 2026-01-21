@@ -1,3 +1,4 @@
+-- [[ MainUI.lua - FULL REVISED VERSION ]] --
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -15,7 +16,15 @@ local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
 ScreenGui.Name = "NabiModern"
 ScreenGui.ResetOnSpawn = false
 
--- [[ DRAG SYSTEM ]] --
+-- [[ HELPERS ]] --
+local function ClearSpecific(tagName)
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v.Name == "NabiGlow" and v:GetAttribute("ESPType") == tagName then
+            v:Destroy()
+        end
+    end
+end
+
 local function MakeDraggable(obj)
     local dragging, dragInput, dragStart, startPos
     obj.InputBegan:Connect(function(input)
@@ -67,7 +76,9 @@ Main.ClipsDescendants = true
 Main.Active = true
 Main.Visible = false
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 8)
-Instance.new("UIStroke", Main).Color = Color3.fromRGB(40, 40, 45)
+local MainStroke = Instance.new("UIStroke", Main)
+MainStroke.Color = Color3.fromRGB(40, 40, 45)
+MainStroke.Thickness = 1.5
 MakeDraggable(Main)
 
 -- [[ ANIMATION CONTROLLER ]] --
@@ -93,9 +104,8 @@ LoadLabel.TextSize = 20
 LoadLabel.Text = "INITIALIZING NABI..."
 
 task.spawn(function()
-    task.wait(1)
+    task.wait(0.5)
     LoadLabel.Text = "SYNCING WITH REPOSITORY..."
-    task.wait(1)
     
     local success, result = pcall(function()
         return loadstring(game:HttpGet(GITHUB_RAW_URL))()
@@ -103,17 +113,16 @@ task.spawn(function()
     
     if success and type(result) == "table" then
         ESP = result
-        LoadLabel.Text = "SYSTEMS READY"
+        LoadLabel.Text = "SYSTEMS ONLINE"
         TweenService:Create(LoadLabel, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
         task.wait(0.5)
         AnimateUI(true)
     else
-        LoadLabel.Text = "FAILURE: CHECK CONSOLE"
+        LoadLabel.Text = "CRITICAL ERROR: CHECK CONSOLE"
         LoadLabel.TextColor3 = Color3.new(1,0,0)
     end
 end)
 
--- [[ BUILD INTERFACE CONTENT ]] --
 -- Header
 local Header = Instance.new("Frame", Main)
 Header.Size = UDim2.new(1, 0, 0, 40)
@@ -123,10 +132,10 @@ Instance.new("UICorner", Header)
 local Title = Instance.new("TextLabel", Header)
 Title.Size = UDim2.new(1, -50, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
-Title.Text = "NABI SENSORY // V6"
+Title.Text = "NABI SENSORY // TERMINAL"
 Title.TextColor3 = Color3.fromRGB(200, 200, 200)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 12
+Title.TextSize = 11
 Title.TextXAlignment = "Left"
 Title.BackgroundTransparency = 1
 
@@ -138,38 +147,38 @@ CloseBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
 CloseBtn.BackgroundTransparency = 1
 CloseBtn.Font = Enum.Font.GothamBold
 
--- Tabs & Toggles
+-- Container
 local ESPContent = Instance.new("Frame", Main)
 ESPContent.Size = UDim2.new(1, -20, 1, -60)
 ESPContent.Position = UDim2.new(0, 10, 0, 50)
 ESPContent.BackgroundTransparency = 1
-local List = Instance.new("UIListLayout", ESPContent)
-List.Padding = UDim.new(0, 10)
+Instance.new("UIListLayout", ESPContent).Padding = UDim.new(0, 8)
 
-local function CreateToggle(name, callback)
+-- Toggle Builder
+local function CreateToggle(name, tag, callback)
     local t = Instance.new("Frame", ESPContent)
     t.Size = UDim2.new(1, 0, 0, 45)
-    t.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    t.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
     Instance.new("UICorner", t).CornerRadius = UDim.new(0, 6)
     
     local l = Instance.new("TextLabel", t)
     l.Size = UDim2.new(0.7, 0, 1, 0)
     l.Position = UDim2.new(0, 12, 0, 0)
     l.Text = name:upper()
-    l.TextColor3 = Color3.fromRGB(150, 150, 150)
+    l.TextColor3 = Color3.fromRGB(180, 180, 180)
     l.Font = Enum.Font.GothamBold
-    l.TextSize = 11
+    l.TextSize = 10
     l.TextXAlignment = "Left"
     l.BackgroundTransparency = 1
     
     local b = Instance.new("TextButton", t)
-    b.Size = UDim2.new(0, 60, 0, 26)
-    b.Position = UDim2.new(1, -70, 0.5, -13)
+    b.Size = UDim2.new(0, 55, 0, 24)
+    b.Position = UDim2.new(1, -65, 0.5, -12)
     b.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
     b.Text = "OFF"
     b.TextColor3 = Color3.new(1,1,1)
     b.Font = Enum.Font.GothamBold
-    b.TextSize = 10
+    b.TextSize = 9
     Instance.new("UICorner", b)
     
     local active = false
@@ -182,7 +191,7 @@ local function CreateToggle(name, callback)
     end)
 end
 
--- Keybinds & Logic
+-- [[ LOGIC COUPLING ]] --
 local function ToggleMain()
     UI_VISIBLE = not UI_VISIBLE
     AnimateUI(UI_VISIBLE)
@@ -192,6 +201,24 @@ CloseBtn.MouseButton1Click:Connect(ToggleMain)
 IconBtn.MouseButton1Click:Connect(ToggleMain)
 UserInputService.InputBegan:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.K then ToggleMain() end
+end)
+
+-- Initialize Toggles
+repeat task.wait() until ESP ~= nil
+
+CreateToggle("Show NPCs", "NPC", function(s) 
+    Toggles.NPC = s 
+    if s then pcall(ESP.ScanNPCs) else ClearSpecific("NPC") end 
+end)
+
+CreateToggle("Show Valuables", "Items", function(s) 
+    Toggles.Items = s 
+    if s then pcall(ESP.ScanItems) else ClearSpecific("Items") end 
+end)
+
+CreateToggle("Show Vaults", "Vaults", function(s) 
+    Toggles.Vaults = s 
+    if s then pcall(ESP.ScanVaults) else ClearSpecific("Vaults") end 
 end)
 
 -- Background Refresh
@@ -204,9 +231,3 @@ task.spawn(function()
         end
     end
 end)
-
--- Initialize Toggles (After loading finishes)
-repeat task.wait() until ESP ~= nil
-CreateToggle("Show NPCs", function(s) Toggles.NPC = s if s then ESP.ScanNPCs() end end)
-CreateToggle("Show Valuables", function(s) Toggles.Items = s if s then ESP.ScanItems() end end)
-CreateToggle("Show Vaults", function(s) Toggles.Vaults = s if s then ESP.ScanVaults() end end)
