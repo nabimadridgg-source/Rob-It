@@ -49,7 +49,7 @@ local function monitorTimer()
                 task.wait(3) -- Stability check
                 
                 if timerPath.Text == currentText then
-                    task.wait(10) -- Primary Delay
+                    task.wait(13) -- Primary Delay
                     
                     clickReplayButton() -- First Attempt
                     task.wait(2) 
