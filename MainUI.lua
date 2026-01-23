@@ -30,6 +30,7 @@ _G.SelectedDifficulty = Difficulties[CurrentDiffIndex]
 -- Initialize Global Variables
 _G.AutoRobEnabled = false
 _G.AutoRetryEnabled = false
+_G.AutoJoinEnabled = false
 
 -- [[ UI ROOT ]] --
 if LocalPlayer.PlayerGui:FindFirstChild("NabiModern") then LocalPlayer.PlayerGui.NabiModern:Destroy() end
@@ -281,8 +282,16 @@ task.spawn(function()
         dNext.MouseButton1Click:Connect(function() CurrentDiffIndex = (CurrentDiffIndex % #Difficulties) + 1; UpdateDiffDisplay("next") end)
         dPrev.MouseButton1Click:Connect(function() CurrentDiffIndex = (CurrentDiffIndex - 2) % #Difficulties + 1; UpdateDiffDisplay("prev") end)
 
-        -- 4. AUTO ROB
-        local autoFrame = Instance.new("Frame", MainContent); autoFrame.Size = UDim2.new(0.95, 0, 0, 50); autoFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", autoFrame); autoFrame.LayoutOrder = 4
+        -- 4. AUTO JOIN
+        local joinFrame = Instance.new("Frame", MainContent); joinFrame.Size = UDim2.new(0.95, 0, 0, 50); joinFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", joinFrame); joinFrame.LayoutOrder = 4
+        local joinLabel = Instance.new("TextLabel", joinFrame); joinLabel.Size = UDim2.new(0.6, 0, 1, 0); joinLabel.Position = UDim2.new(0, 15, 0, 0); joinLabel.Text = "AUTO JOIN"; joinLabel.TextColor3 = Color3.new(1,1,1); joinLabel.Font = "GothamBold"; joinLabel.TextSize = 11; joinLabel.TextXAlignment = "Left"; joinLabel.BackgroundTransparency = 1
+        local joinBtn = Instance.new("TextButton", joinFrame); joinBtn.Size = UDim2.new(0, 75, 0, 28); joinBtn.Position = UDim2.new(1, -85, 0.5, -14); joinBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40); joinBtn.Text = "OFF"; joinBtn.TextColor3 = Color3.new(1,1,1); joinBtn.Font = "GothamBold"; joinBtn.TextSize = 9; Instance.new("UICorner", joinBtn)
+        joinBtn.MouseButton1Click:Connect(function()
+            _G.AutoJoinEnabled = not _G.AutoJoinEnabled; joinBtn.Text = _G.AutoJoinEnabled and "ON" or "OFF"; TweenService:Create(joinBtn, TweenInfo.new(0.3), {BackgroundColor3 = _G.AutoJoinEnabled and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(35, 35, 40)}):Play(); joinBtn.TextColor3 = _G.AutoJoinEnabled and Color3.new(0,0,0) or Color3.new(1,1,1)
+        end)
+
+        -- 5. AUTO ROB
+        local autoFrame = Instance.new("Frame", MainContent); autoFrame.Size = UDim2.new(0.95, 0, 0, 50); autoFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", autoFrame); autoFrame.LayoutOrder = 5
         local autoLabel = Instance.new("TextLabel", autoFrame); autoLabel.Size = UDim2.new(0.6, 0, 1, 0); autoLabel.Position = UDim2.new(0, 15, 0, 0); autoLabel.Text = "AUTO ROB"; autoLabel.TextColor3 = Color3.new(1,1,1); autoLabel.Font = "GothamBold"; autoLabel.TextSize = 11; autoLabel.TextXAlignment = "Left"; autoLabel.BackgroundTransparency = 1
         local autoBtn = Instance.new("TextButton", autoFrame); autoBtn.Size = UDim2.new(0, 75, 0, 28); autoBtn.Position = UDim2.new(1, -85, 0.5, -14); autoBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40); autoBtn.Text = "OFF"; autoBtn.TextColor3 = Color3.new(1,1,1); autoBtn.Font = "GothamBold"; autoBtn.TextSize = 9; Instance.new("UICorner", autoBtn)
         autoBtn.MouseButton1Click:Connect(function()
@@ -290,8 +299,8 @@ task.spawn(function()
             if AUTO then if _G.AutoRobEnabled then pcall(AUTO.Start) else pcall(AUTO.Stop) end end
         end)
 
-        -- 5. AUTO RETRY
-        local retryFrame = Instance.new("Frame", MainContent); retryFrame.Size = UDim2.new(0.95, 0, 0, 50); retryFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", retryFrame); retryFrame.LayoutOrder = 5
+        -- 6. AUTO RETRY
+        local retryFrame = Instance.new("Frame", MainContent); retryFrame.Size = UDim2.new(0.95, 0, 0, 50); retryFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", retryFrame); retryFrame.LayoutOrder = 6
         local retryLabel = Instance.new("TextLabel", retryFrame); retryLabel.Size = UDim2.new(0.6, 0, 1, 0); retryLabel.Position = UDim2.new(0, 15, 0, 0); retryLabel.Text = "AUTO RETRY"; retryLabel.TextColor3 = Color3.new(1,1,1); retryLabel.Font = "GothamBold"; retryLabel.TextSize = 11; retryLabel.TextXAlignment = "Left"; retryLabel.BackgroundTransparency = 1
         local retryBtn = Instance.new("TextButton", retryFrame); retryBtn.Size = UDim2.new(0, 75, 0, 28); retryBtn.Position = UDim2.new(1, -85, 0.5, -14); retryBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40); retryBtn.Text = "OFF"; retryBtn.TextColor3 = Color3.new(1,1,1); retryBtn.Font = "GothamBold"; retryBtn.TextSize = 9; Instance.new("UICorner", retryBtn)
         retryBtn.MouseButton1Click:Connect(function()
