@@ -6,12 +6,17 @@ local LocalPlayer = Players.LocalPlayer
 
 local ESP_URL = "https://raw.githubusercontent.com/nabimadridgg-source/Rob-It/refs/heads/main/ESP.lua?t="..tick()
 local AUTO_URL = "https://raw.githubusercontent.com/nabimadridgg-source/Rob-It/refs/heads/main/AUTO.lua?t="..tick()
+local RETRY_URL = "https://raw.githubusercontent.com/nabimadridgg-source/Rob-It/refs/heads/main/RETRY.lua?t="..tick()
 
 local ESP = nil
 local AUTO = nil
+local RETRY = nil
 local ESP_ENABLED = false
-local AUTO_ENABLED = false
 local UI_OPEN = true
+
+-- Initialize Global Variables
+_G.AutoRobEnabled = false
+_G.AutoRetryEnabled = false
 
 -- [[ UI ROOT ]] --
 if LocalPlayer.PlayerGui:FindFirstChild("NabiModern") then LocalPlayer.PlayerGui.NabiModern:Destroy() end
@@ -97,8 +102,8 @@ StatusLabel.TextTransparency = 1
 
 -- [[ MAIN DASHBOARD ]] --
 local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.new(0, 0, 0, 0)
-Main.Position = UDim2.new(0.5, 0, 0.5, 0)
+Main.Size = UDim2.new(0, 360, 0, 280)
+Main.Position = UDim2.new(0.5, -180, 0.5, -140)
 Main.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
 Main.BorderSizePixel = 0
 Main.ClipsDescendants = true
@@ -112,7 +117,7 @@ CanvasGroup.Size = UDim2.new(1, 0, 1, 0); CanvasGroup.BackgroundTransparency = 1
 
 -- [[ HIDE ICON ]] --
 local Icon = Instance.new("Frame", ScreenGui)
-Icon.Size = UDim2.new(0, 0, 0, 0)
+Icon.Size = UDim2.new(0, 45, 0, 45)
 Icon.Position = UDim2.new(0.05, 0, 0.4, 0)
 Icon.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
 Icon.Visible = false
@@ -166,6 +171,10 @@ MainContent.Size = UDim2.new(1, -20, 1, -75); MainContent.Position = UDim2.new(0
 local ESPContent = Instance.new("Frame", CanvasGroup)
 ESPContent.Size = UDim2.new(1, -20, 1, -75); ESPContent.Position = UDim2.new(0, 10, 0, 75); ESPContent.BackgroundTransparency = 1; ESPContent.Visible = false
 
+local UIList = Instance.new("UIListLayout", MainContent)
+UIList.Padding = UDim.new(0, 10)
+UIList.SortOrder = Enum.SortOrder.LayoutOrder
+
 MainBtn.MouseButton1Click:Connect(function() MainContent.Visible, ESPContent.Visible = true, false; MainBtn.TextColor3, ESPBtn.TextColor3 = Color3.new(1,1,1), Color3.fromRGB(100,100,100) end)
 ESPBtn.MouseButton1Click:Connect(function() MainContent.Visible, ESPContent.Visible = false, true; ESPBtn.TextColor3, MainBtn.TextColor3 = Color3.new(1,1,1), Color3.fromRGB(100,100,100) end)
 
@@ -193,13 +202,15 @@ task.spawn(function()
     
     task.wait(2.5)
     
-    -- Load both scripts
+    -- Load scripts
     local successESP, resESP = pcall(function() return loadstring(game:HttpGet(ESP_URL))() end)
     local successAUTO, resAUTO = pcall(function() return loadstring(game:HttpGet(AUTO_URL))() end)
+    local successRETRY, resRETRY = pcall(function() return loadstring(game:HttpGet(RETRY_URL))() end)
     
-    if successESP and successAUTO then
+    if successESP then
         ESP = resESP
         AUTO = resAUTO
+        RETRY = resRETRY
         StatusLabel.Text = "READY"
         task.wait(0.5)
         
@@ -214,21 +225,37 @@ task.spawn(function()
         AnimateUI(true)
         
         -- [[ MAIN CONTENT TOGGLES ]] --
+        -- 1. AUTO ROB
         local autoFrame = Instance.new("Frame", MainContent)
         autoFrame.Size = UDim2.new(1, 0, 0, 50); autoFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", autoFrame)
-        local autoLabel = Instance.new("TextLabel", autoFrame); autoLabel.Size = UDim2.new(0.6, 0, 1, 0); autoLabel.Position = UDim2.new(0, 15, 0, 0); autoLabel.Text = "AUTO"; autoLabel.TextColor3 = Color3.new(1,1,1); autoLabel.Font = "GothamBold"; autoLabel.TextSize = 11; autoLabel.TextXAlignment = "Left"; autoLabel.BackgroundTransparency = 1
+        local autoLabel = Instance.new("TextLabel", autoFrame); autoLabel.Size = UDim2.new(0.6, 0, 1, 0); autoLabel.Position = UDim2.new(0, 15, 0, 0); autoLabel.Text = "AUTO ROB"; autoLabel.TextColor3 = Color3.new(1,1,1); autoLabel.Font = "GothamBold"; autoLabel.TextSize = 11; autoLabel.TextXAlignment = "Left"; autoLabel.BackgroundTransparency = 1
         local autoBtn = Instance.new("TextButton", autoFrame); autoBtn.Size = UDim2.new(0, 75, 0, 28); autoBtn.Position = UDim2.new(1, -85, 0.5, -14); autoBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40); autoBtn.Text = "OFF"; autoBtn.TextColor3 = Color3.new(1,1,1); autoBtn.Font = "GothamBold"; autoBtn.TextSize = 9; Instance.new("UICorner", autoBtn)
         
         autoBtn.MouseButton1Click:Connect(function()
-            AUTO_ENABLED = not AUTO_ENABLED
-            autoBtn.Text = AUTO_ENABLED and "ON" or "OFF"
-            TweenService:Create(autoBtn, TweenInfo.new(0.3), {BackgroundColor3 = AUTO_ENABLED and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(35, 35, 40)}):Play()
-            autoBtn.TextColor3 = AUTO_ENABLED and Color3.new(0,0,0) or Color3.new(1,1,1)
+            _G.AutoRobEnabled = not _G.AutoRobEnabled
+            autoBtn.Text = _G.AutoRobEnabled and "ON" or "OFF"
+            TweenService:Create(autoBtn, TweenInfo.new(0.3), {BackgroundColor3 = _G.AutoRobEnabled and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(35, 35, 40)}):Play()
+            autoBtn.TextColor3 = _G.AutoRobEnabled and Color3.new(0,0,0) or Color3.new(1,1,1)
             
-            if AUTO and AUTO_ENABLED then 
-                pcall(AUTO.Start) 
-            elseif AUTO then 
-                pcall(AUTO.Stop) 
+            if AUTO then
+                if _G.AutoRobEnabled then pcall(AUTO.Start) else pcall(AUTO.Stop) end
+            end
+        end)
+
+        -- 2. AUTO RETRY
+        local retryFrame = Instance.new("Frame", MainContent)
+        retryFrame.Size = UDim2.new(1, 0, 0, 50); retryFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", retryFrame)
+        local retryLabel = Instance.new("TextLabel", retryFrame); retryLabel.Size = UDim2.new(0.6, 0, 1, 0); retryLabel.Position = UDim2.new(0, 15, 0, 0); retryLabel.Text = "AUTO RETRY"; retryLabel.TextColor3 = Color3.new(1,1,1); retryLabel.Font = "GothamBold"; retryLabel.TextSize = 11; retryLabel.TextXAlignment = "Left"; retryLabel.BackgroundTransparency = 1
+        local retryBtn = Instance.new("TextButton", retryFrame); retryBtn.Size = UDim2.new(0, 75, 0, 28); retryBtn.Position = UDim2.new(1, -85, 0.5, -14); retryBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40); retryBtn.Text = "OFF"; retryBtn.TextColor3 = Color3.new(1,1,1); retryBtn.Font = "GothamBold"; retryBtn.TextSize = 9; Instance.new("UICorner", retryBtn)
+
+        retryBtn.MouseButton1Click:Connect(function()
+            _G.AutoRetryEnabled = not _G.AutoRetryEnabled
+            retryBtn.Text = _G.AutoRetryEnabled and "ON" or "OFF"
+            TweenService:Create(retryBtn, TweenInfo.new(0.3), {BackgroundColor3 = _G.AutoRetryEnabled and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(35, 35, 40)}):Play()
+            retryBtn.TextColor3 = _G.AutoRetryEnabled and Color3.new(0,0,0) or Color3.new(1,1,1)
+            
+            if RETRY then
+                if _G.AutoRetryEnabled then pcall(RETRY.Start) else pcall(RETRY.Stop) end
             end
         end)
 
