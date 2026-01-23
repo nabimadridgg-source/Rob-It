@@ -7,10 +7,12 @@ local LocalPlayer = Players.LocalPlayer
 local ESP_URL = "https://raw.githubusercontent.com/nabimadridgg-source/Rob-It/refs/heads/main/ESP.lua?t="..tick()
 local AUTO_URL = "https://raw.githubusercontent.com/nabimadridgg-source/Rob-It/refs/heads/main/AUTO.lua?t="..tick()
 local RETRY_URL = "https://raw.githubusercontent.com/nabimadridgg-source/Rob-It/refs/heads/main/RETRY.lua?t="..tick()
+local AUTOSTART_URL = "https://raw.githubusercontent.com/nabimadridgg-source/Rob-It/refs/heads/main/AUTOSTART.lua?t="..tick()
 
 local ESP = nil
 local AUTO = nil
 local RETRY = nil
+local AUTOSTART = nil
 local ESP_ENABLED = false
 local UI_OPEN = true
 
@@ -219,19 +221,24 @@ task.spawn(function()
     local successESP, resESP = pcall(function() return loadstring(game:HttpGet(ESP_URL))() end)
     local successAUTO, resAUTO = pcall(function() return loadstring(game:HttpGet(AUTO_URL))() end)
     local successRETRY, resRETRY = pcall(function() return loadstring(game:HttpGet(RETRY_URL))() end)
+    local successAUTOSTART, resAUTOSTART = pcall(function() return loadstring(game:HttpGet(AUTOSTART_URL))() end)
     
     if successESP then
-        ESP = resESP; AUTO = resAUTO; RETRY = resRETRY
+        ESP = resESP; AUTO = resAUTO; RETRY = resRETRY; AUTOSTART = resAUTOSTART
         StatusLabel.Text = "READY"; task.wait(0.5)
         TweenService:Create(LoadingFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0), BackgroundTransparency = 1}):Play()
         task.wait(0.5); LoadingFrame:Destroy(); AnimateUI(true)
         
         -- [[ MAIN CONTENT TOGGLES ]] --
         
-        -- 1. MAP SELECTOR
-        local mapFrame = Instance.new("Frame", MainContent); mapFrame.Size = UDim2.new(0.95, 0, 0, 50); mapFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", mapFrame); mapFrame.LayoutOrder = 1
-        local mapLabel = Instance.new("TextLabel", mapFrame); mapLabel.Size = UDim2.new(0.4, 0, 1, 0); mapLabel.Position = UDim2.new(0, 15, 0, 0); mapLabel.Text = "SELECT MAP"; mapLabel.TextColor3 = Color3.new(1,1,1); mapLabel.Font = "GothamBold"; mapLabel.TextSize = 11; mapLabel.TextXAlignment = "Left"; mapLabel.BackgroundTransparency = 1
-        local mapSelector = Instance.new("Frame", mapFrame); mapSelector.Size = UDim2.new(0, 150, 0, 28); mapSelector.Position = UDim2.new(1, -160, 0.5, -14); mapSelector.BackgroundColor3 = Color3.fromRGB(35, 35, 40); mapSelector.ClipsDescendants = true; Instance.new("UICorner", mapSelector)
+        -- GROUPED SESSION CONTAINER (MAP, PLAYERS, DIFFICULTY, AUTO JOIN)
+        local GroupFrame = Instance.new("Frame", MainContent); GroupFrame.Size = UDim2.new(0.95, 0, 0, 210); GroupFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", GroupFrame); GroupFrame.LayoutOrder = 1
+        local GroupLayout = Instance.new("UIListLayout", GroupFrame); GroupLayout.Padding = UDim.new(0, 0); GroupLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+        -- 1. SELECT MAP (Inside Group)
+        local mapRow = Instance.new("Frame", GroupFrame); mapRow.Size = UDim2.new(1, 0, 0, 50); mapRow.BackgroundTransparency = 1; mapRow.LayoutOrder = 1
+        local mapLabel = Instance.new("TextLabel", mapRow); mapLabel.Size = UDim2.new(0.4, 0, 1, 0); mapLabel.Position = UDim2.new(0, 15, 0, 0); mapLabel.Text = "SELECT MAP"; mapLabel.TextColor3 = Color3.new(1,1,1); mapLabel.Font = "GothamBold"; mapLabel.TextSize = 11; mapLabel.TextXAlignment = "Left"; mapLabel.BackgroundTransparency = 1
+        local mapSelector = Instance.new("Frame", mapRow); mapSelector.Size = UDim2.new(0, 150, 0, 28); mapSelector.Position = UDim2.new(1, -160, 0.5, -14); mapSelector.BackgroundColor3 = Color3.fromRGB(35, 35, 40); mapSelector.ClipsDescendants = true; Instance.new("UICorner", mapSelector)
         local mapText = Instance.new("TextLabel", mapSelector); mapText.Size = UDim2.new(1, 0, 1, 0); mapText.Text = Maps[CurrentMapIndex]; mapText.TextColor3 = Color3.fromRGB(0, 255, 255); mapText.Font = "GothamBold"; mapText.TextSize = 9; mapText.BackgroundTransparency = 1
         local mPrev = Instance.new("TextButton", mapSelector); mPrev.Size = UDim2.new(0, 25, 1, 0); mPrev.Text = "<"; mPrev.TextColor3 = Color3.new(1,1,1); mPrev.Font = "GothamBold"; mPrev.BackgroundTransparency = 1; mPrev.ZIndex = 2
         local mNext = Instance.new("TextButton", mapSelector); mNext.Size = UDim2.new(0, 25, 1, 0); mNext.Position = UDim2.new(1, -25, 0, 0); mNext.Text = ">"; mNext.TextColor3 = Color3.new(1,1,1); mNext.Font = "GothamBold"; mNext.BackgroundTransparency = 1; mNext.ZIndex = 2
@@ -246,10 +253,10 @@ task.spawn(function()
         mNext.MouseButton1Click:Connect(function() CurrentMapIndex = (CurrentMapIndex % #Maps) + 1; UpdateMapDisplay("next") end)
         mPrev.MouseButton1Click:Connect(function() CurrentMapIndex = (CurrentMapIndex - 2) % #Maps + 1; UpdateMapDisplay("prev") end)
 
-        -- 2. PLAYER COUNT
-        local pCountFrame = Instance.new("Frame", MainContent); pCountFrame.Size = UDim2.new(0.95, 0, 0, 50); pCountFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", pCountFrame); pCountFrame.LayoutOrder = 2
-        local pCountLabel = Instance.new("TextLabel", pCountFrame); pCountLabel.Size = UDim2.new(0.4, 0, 1, 0); pCountLabel.Position = UDim2.new(0, 15, 0, 0); pCountLabel.Text = "PLAYER COUNT"; pCountLabel.TextColor3 = Color3.new(1,1,1); pCountLabel.Font = "GothamBold"; pCountLabel.TextSize = 11; pCountLabel.TextXAlignment = "Left"; pCountLabel.BackgroundTransparency = 1
-        local pSelector = Instance.new("Frame", pCountFrame); pSelector.Size = UDim2.new(0, 150, 0, 28); pSelector.Position = UDim2.new(1, -160, 0.5, -14); pSelector.BackgroundColor3 = Color3.fromRGB(35, 35, 40); pSelector.ClipsDescendants = true; Instance.new("UICorner", pSelector)
+        -- 2. SELECT PLAYER COUNT (Inside Group)
+        local pCountRow = Instance.new("Frame", GroupFrame); pCountRow.Size = UDim2.new(1, 0, 0, 50); pCountRow.BackgroundTransparency = 1; pCountRow.LayoutOrder = 2
+        local pCountLabel = Instance.new("TextLabel", pCountRow); pCountLabel.Size = UDim2.new(0.4, 0, 1, 0); pCountLabel.Position = UDim2.new(0, 15, 0, 0); pCountLabel.Text = "SELECT PLAYER COUNT"; pCountLabel.TextColor3 = Color3.new(1,1,1); pCountLabel.Font = "GothamBold"; pCountLabel.TextSize = 11; pCountLabel.TextXAlignment = "Left"; pCountLabel.BackgroundTransparency = 1
+        local pSelector = Instance.new("Frame", pCountRow); pSelector.Size = UDim2.new(0, 150, 0, 28); pSelector.Position = UDim2.new(1, -160, 0.5, -14); pSelector.BackgroundColor3 = Color3.fromRGB(35, 35, 40); pSelector.ClipsDescendants = true; Instance.new("UICorner", pSelector)
         local pText = Instance.new("TextLabel", pSelector); pText.Size = UDim2.new(1, 0, 1, 0); pText.Text = PlayerCounts[CurrentPlayerIndex]; pText.TextColor3 = Color3.fromRGB(0, 255, 255); pText.Font = "GothamBold"; pText.TextSize = 9; pText.BackgroundTransparency = 1
         local pPrev = Instance.new("TextButton", pSelector); pPrev.Size = UDim2.new(0, 25, 1, 0); pPrev.Text = "<"; pPrev.TextColor3 = Color3.new(1,1,1); pPrev.Font = "GothamBold"; pPrev.BackgroundTransparency = 1; pPrev.ZIndex = 2
         local pNext = Instance.new("TextButton", pSelector); pNext.Size = UDim2.new(0, 25, 1, 0); pNext.Position = UDim2.new(1, -25, 0, 0); pNext.Text = ">"; pNext.TextColor3 = Color3.new(1,1,1); pNext.Font = "GothamBold"; pNext.BackgroundTransparency = 1; pNext.ZIndex = 2
@@ -264,10 +271,10 @@ task.spawn(function()
         pNext.MouseButton1Click:Connect(function() CurrentPlayerIndex = (CurrentPlayerIndex % #PlayerCounts) + 1; UpdatePlayerDisplay("next") end)
         pPrev.MouseButton1Click:Connect(function() CurrentPlayerIndex = (CurrentPlayerIndex - 2) % #PlayerCounts + 1; UpdatePlayerDisplay("prev") end)
 
-        -- 3. DIFFICULTY SELECTOR
-        local diffFrame = Instance.new("Frame", MainContent); diffFrame.Size = UDim2.new(0.95, 0, 0, 50); diffFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", diffFrame); diffFrame.LayoutOrder = 3
-        local diffLabel = Instance.new("TextLabel", diffFrame); diffLabel.Size = UDim2.new(0.4, 0, 1, 0); diffLabel.Position = UDim2.new(0, 15, 0, 0); diffLabel.Text = "DIFFICULTY"; diffLabel.TextColor3 = Color3.new(1,1,1); diffLabel.Font = "GothamBold"; diffLabel.TextSize = 11; diffLabel.TextXAlignment = "Left"; diffLabel.BackgroundTransparency = 1
-        local dSelector = Instance.new("Frame", diffFrame); dSelector.Size = UDim2.new(0, 150, 0, 28); dSelector.Position = UDim2.new(1, -160, 0.5, -14); dSelector.BackgroundColor3 = Color3.fromRGB(35, 35, 40); dSelector.ClipsDescendants = true; Instance.new("UICorner", dSelector)
+        -- 3. SELECT DIFFICULTY (Inside Group)
+        local diffRow = Instance.new("Frame", GroupFrame); diffRow.Size = UDim2.new(1, 0, 0, 50); diffRow.BackgroundTransparency = 1; diffRow.LayoutOrder = 3
+        local diffLabel = Instance.new("TextLabel", diffRow); diffLabel.Size = UDim2.new(0.4, 0, 1, 0); diffLabel.Position = UDim2.new(0, 15, 0, 0); diffLabel.Text = "SELECT DIFFICULTY"; diffLabel.TextColor3 = Color3.new(1,1,1); diffLabel.Font = "GothamBold"; diffLabel.TextSize = 11; diffLabel.TextXAlignment = "Left"; diffLabel.BackgroundTransparency = 1
+        local dSelector = Instance.new("Frame", diffRow); dSelector.Size = UDim2.new(0, 150, 0, 28); dSelector.Position = UDim2.new(1, -160, 0.5, -14); dSelector.BackgroundColor3 = Color3.fromRGB(35, 35, 40); dSelector.ClipsDescendants = true; Instance.new("UICorner", dSelector)
         local dText = Instance.new("TextLabel", dSelector); dText.Size = UDim2.new(1, 0, 1, 0); dText.Text = Difficulties[CurrentDiffIndex]; dText.TextColor3 = Color3.fromRGB(0, 255, 255); dText.Font = "GothamBold"; dText.TextSize = 9; dText.BackgroundTransparency = 1
         local dPrev = Instance.new("TextButton", dSelector); dPrev.Size = UDim2.new(0, 25, 1, 0); dPrev.Text = "<"; dPrev.TextColor3 = Color3.new(1,1,1); dPrev.Font = "GothamBold"; dPrev.BackgroundTransparency = 1; dPrev.ZIndex = 2
         local dNext = Instance.new("TextButton", dSelector); dNext.Size = UDim2.new(0, 25, 1, 0); dNext.Position = UDim2.new(1, -25, 0, 0); dNext.Text = ">"; dNext.TextColor3 = Color3.new(1,1,1); dNext.Font = "GothamBold"; dNext.BackgroundTransparency = 1; dNext.ZIndex = 2
@@ -282,15 +289,16 @@ task.spawn(function()
         dNext.MouseButton1Click:Connect(function() CurrentDiffIndex = (CurrentDiffIndex % #Difficulties) + 1; UpdateDiffDisplay("next") end)
         dPrev.MouseButton1Click:Connect(function() CurrentDiffIndex = (CurrentDiffIndex - 2) % #Difficulties + 1; UpdateDiffDisplay("prev") end)
 
-        -- 4. AUTO JOIN
-        local joinFrame = Instance.new("Frame", MainContent); joinFrame.Size = UDim2.new(0.95, 0, 0, 50); joinFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", joinFrame); joinFrame.LayoutOrder = 4
-        local joinLabel = Instance.new("TextLabel", joinFrame); joinLabel.Size = UDim2.new(0.6, 0, 1, 0); joinLabel.Position = UDim2.new(0, 15, 0, 0); joinLabel.Text = "AUTO JOIN"; joinLabel.TextColor3 = Color3.new(1,1,1); joinLabel.Font = "GothamBold"; joinLabel.TextSize = 11; joinLabel.TextXAlignment = "Left"; joinLabel.BackgroundTransparency = 1
-        local joinBtn = Instance.new("TextButton", joinFrame); joinBtn.Size = UDim2.new(0, 75, 0, 28); joinBtn.Position = UDim2.new(1, -85, 0.5, -14); joinBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40); joinBtn.Text = "OFF"; joinBtn.TextColor3 = Color3.new(1,1,1); joinBtn.Font = "GothamBold"; joinBtn.TextSize = 9; Instance.new("UICorner", joinBtn)
+        -- 4. AUTO JOIN (Inside Group & Linked to AUTOSTART)
+        local joinRow = Instance.new("Frame", GroupFrame); joinRow.Size = UDim2.new(1, 0, 0, 50); joinRow.BackgroundTransparency = 1; joinRow.LayoutOrder = 4
+        local joinLabel = Instance.new("TextLabel", joinRow); joinLabel.Size = UDim2.new(0.6, 0, 1, 0); joinLabel.Position = UDim2.new(0, 15, 0, 0); joinLabel.Text = "AUTO JOIN"; joinLabel.TextColor3 = Color3.new(1,1,1); joinLabel.Font = "GothamBold"; joinLabel.TextSize = 11; joinLabel.TextXAlignment = "Left"; joinLabel.BackgroundTransparency = 1
+        local joinBtn = Instance.new("TextButton", joinRow); joinBtn.Size = UDim2.new(0, 75, 0, 28); joinBtn.Position = UDim2.new(1, -85, 0.5, -14); joinBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40); joinBtn.Text = "OFF"; joinBtn.TextColor3 = Color3.new(1,1,1); joinBtn.Font = "GothamBold"; joinBtn.TextSize = 9; Instance.new("UICorner", joinBtn)
         joinBtn.MouseButton1Click:Connect(function()
             _G.AutoJoinEnabled = not _G.AutoJoinEnabled; joinBtn.Text = _G.AutoJoinEnabled and "ON" or "OFF"; TweenService:Create(joinBtn, TweenInfo.new(0.3), {BackgroundColor3 = _G.AutoJoinEnabled and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(35, 35, 40)}):Play(); joinBtn.TextColor3 = _G.AutoJoinEnabled and Color3.new(0,0,0) or Color3.new(1,1,1)
+            if AUTOSTART then if _G.AutoJoinEnabled then pcall(AUTOSTART.Start) else pcall(AUTOSTART.Stop) end end
         end)
 
-        -- 5. AUTO ROB
+        -- 5. AUTO ROB (Standalone)
         local autoFrame = Instance.new("Frame", MainContent); autoFrame.Size = UDim2.new(0.95, 0, 0, 50); autoFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", autoFrame); autoFrame.LayoutOrder = 5
         local autoLabel = Instance.new("TextLabel", autoFrame); autoLabel.Size = UDim2.new(0.6, 0, 1, 0); autoLabel.Position = UDim2.new(0, 15, 0, 0); autoLabel.Text = "AUTO ROB"; autoLabel.TextColor3 = Color3.new(1,1,1); autoLabel.Font = "GothamBold"; autoLabel.TextSize = 11; autoLabel.TextXAlignment = "Left"; autoLabel.BackgroundTransparency = 1
         local autoBtn = Instance.new("TextButton", autoFrame); autoBtn.Size = UDim2.new(0, 75, 0, 28); autoBtn.Position = UDim2.new(1, -85, 0.5, -14); autoBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40); autoBtn.Text = "OFF"; autoBtn.TextColor3 = Color3.new(1,1,1); autoBtn.Font = "GothamBold"; autoBtn.TextSize = 9; Instance.new("UICorner", autoBtn)
@@ -299,7 +307,7 @@ task.spawn(function()
             if AUTO then if _G.AutoRobEnabled then pcall(AUTO.Start) else pcall(AUTO.Stop) end end
         end)
 
-        -- 6. AUTO RETRY
+        -- 6. AUTO RETRY (Standalone)
         local retryFrame = Instance.new("Frame", MainContent); retryFrame.Size = UDim2.new(0.95, 0, 0, 50); retryFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", retryFrame); retryFrame.LayoutOrder = 6
         local retryLabel = Instance.new("TextLabel", retryFrame); retryLabel.Size = UDim2.new(0.6, 0, 1, 0); retryLabel.Position = UDim2.new(0, 15, 0, 0); retryLabel.Text = "AUTO RETRY"; retryLabel.TextColor3 = Color3.new(1,1,1); retryLabel.Font = "GothamBold"; retryLabel.TextSize = 11; retryLabel.TextXAlignment = "Left"; retryLabel.BackgroundTransparency = 1
         local retryBtn = Instance.new("TextButton", retryFrame); retryBtn.Size = UDim2.new(0, 75, 0, 28); retryBtn.Position = UDim2.new(1, -85, 0.5, -14); retryBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40); retryBtn.Text = "OFF"; retryBtn.TextColor3 = Color3.new(1,1,1); retryBtn.Font = "GothamBold"; retryBtn.TextSize = 9; Instance.new("UICorner", retryBtn)
@@ -307,6 +315,9 @@ task.spawn(function()
             _G.AutoRetryEnabled = not _G.AutoRetryEnabled; retryBtn.Text = _G.AutoRetryEnabled and "ON" or "OFF"; TweenService:Create(retryBtn, TweenInfo.new(0.3), {BackgroundColor3 = _G.AutoRetryEnabled and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(35, 35, 40)}):Play(); retryBtn.TextColor3 = _G.AutoRetryEnabled and Color3.new(0,0,0) or Color3.new(1,1,1)
             if RETRY then if _G.AutoRetryEnabled then pcall(RETRY.Start) else pcall(RETRY.Stop) end end
         end)
+
+        -- 7. BOTTOM PADDING
+        local paddingFrame = Instance.new("Frame", MainContent); paddingFrame.Size = UDim2.new(1, 0, 0, 15); paddingFrame.BackgroundTransparency = 1; paddingFrame.LayoutOrder = 7
 
         -- ESP TOGGLE
         local espFrame = Instance.new("Frame", ESPContent); espFrame.Size = UDim2.new(1, 0, 0, 50); espFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); Instance.new("UICorner", espFrame)
