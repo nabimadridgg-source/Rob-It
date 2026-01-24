@@ -1,8 +1,9 @@
--- [[ ESP.lua - FULL REVISED ]] --
+-- [[ ESP.lua - FULL REVISED + RED NPCS ]] --
 local ESP = {}
 
 local COLORS = {
     NPC = Color3.fromRGB(255, 70, 70),
+    OPPONENT = Color3.fromRGB(255, 0, 0), -- Pure Red for workspace.Map.NPCS
     DIAMOND = Color3.fromRGB(0, 255, 255),
     TOOL = Color3.fromRGB(160, 82, 45),
     NATURAL = Color3.fromRGB(50, 255, 50),
@@ -26,16 +27,25 @@ function ESP.ScanAll()
     local Map = workspace:FindFirstChild("Map")
     if not Map then return end
 
-    -- Scan NPCs
-    local NPCS = Map:FindFirstChild("NPCS")
-    local Unnamed = NPCS and (NPCS:FindFirstChild("") or NPCS:FindFirstChild(" "))
+    -- 1. ADDITIONAL RED ESP (workspace.Map.NPCS)
+    -- Highlights ALL objects in this folder as Pure Red
+    local NPCSFolder = Map:FindFirstChild("NPCS")
+    if NPCSFolder then
+        for _, obj in ipairs(NPCSFolder:GetChildren()) do
+            -- Apply Red to every object in the main NPCS folder
+            ApplyGlow(obj, COLORS.OPPONENT)
+        end
+    end
+
+    -- 2. ORIGINAL NPC SCAN (Unnamed sub-folders)
+    local Unnamed = NPCSFolder and (NPCSFolder:FindFirstChild("") or NPCSFolder:FindFirstChild(" "))
     if Unnamed then
         for _, v in ipairs(Unnamed:GetChildren()) do
             if v.Name ~= "NPCRequirements" then ApplyGlow(v, COLORS.NPC) end
         end
     end
 
-    -- Scan Stealables (Gems, Natural, Tools, and Diamond-like objects)
+    -- 3. SCAN STEALABLES (Gems, Natural, Tools, etc.)
     local Steal = Map:FindFirstChild("StealableItems")
     if Steal then
         for _, v in ipairs(Steal:GetChildren()) do
@@ -49,7 +59,7 @@ function ESP.ScanAll()
         end
     end
 
-    -- Scan Vaults
+    -- 4. SCAN VAULTS
     local Vaults = Map:FindFirstChild("VaultsPositions")
     if Vaults then
         for _, v in ipairs(Vaults:GetChildren()) do ApplyGlow(v, COLORS.VAULT) end
