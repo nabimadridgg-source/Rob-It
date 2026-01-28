@@ -16,7 +16,7 @@ local IsTweening = false
 local LastMovementTime = tick()
 local StuckThreshold = 13
 local ItemCounter = 0
-local MaxItemsBeforeTruck = 23
+local MaxItemsBeforeTruck = 15
 
 -- [[ ENVIRONMENT CLEANER ]] --
 local function CleanEnvironment()
